@@ -1,0 +1,49 @@
+import wrds
+import pandas as pd
+db = wrds.Connection(wrds_username="wenjunjin")
+df = db.raw_sql("""
+    SELECT tic AS Symbol,
+           conm AS Name,
+           prcc_f AS Price,
+           csho * prcc_f AS Marketcap,
+           ebitda AS EBITDA,
+           dltt + dlc AS Debt,
+           ni AS Net_Income,
+           revt AS Revenue,
+           seq AS Equity,
+           datadate
+    FROM comp.funda
+    WHERE tic IN ('AAPL','MSFT','GOOGL','AMZN','TSLA','JPM','JNJ','V','NVDA','WMT')
+      AND EXTRACT(YEAR FROM datadate) >= EXTRACT(YEAR FROM CURRENT_DATE) - 5
+      AND datafmt = 'STD'
+      AND consol = 'C'
+      AND indfmt = 'INDL'
+""")
+df
+def analyze_financial_health(df):
+if df.empty:
+        raise ValueError("错误：未获取到任何公司数据，请检查股票代码或日期")
+required_cols = ['price', 'marketcap', 'ebitda', 'debt', 'net_income', 'revenue','equity','datadate']
+    missing_cols = [col for col in required_cols if col not in df.columns]
+    if missing_cols:
+        raise KeyError(f"错误：数据缺少必要字段：{missing_cols}")
+df = df.dropna().copy()
+    df = df[(df['revenue'] > 0) & (df['equity'] > 0)]
+df['Debt_to_Equity'] = df['debt'] / df['equity']
+    df['Profit_Margin'] = df['net_income'] / df['revenue']
+    df['ROE'] = df['net_income'] / df['equity']
+    
+    return df, None
+analyzed_df, sector_stats = analyze_financial_health(df)
+print("\n" + "=" * 60)
+print("Equity (Shareholders' Equity) Data")
+print("=" * 60)
+print(analyzed_df[['symbol', 'name', 'equity']].round(2))
+print("\n" + "=" * 60)
+print("Industry Financial Analysis (Not Available: No Sector Data)")
+print("=" * 60)
+analyzed_df['Risk_Score'] = (
+    analyzed_df['Debt_to_Equity'] * 0.5 +
+    (1 - analyzed_df['Profit_Margin']) * 0.3 +
+    (1 - analyzed_df['ROE']) * 0.2
+)
