@@ -1,8 +1,5 @@
 # ACC102 Financial Health Analysis 
 Financial indicator calculation, risk assessment and visualization for 10 U.S. listed companies 
-## Student Information
- - Name: Wenjun Jin
- - Student ID: 2470804 
 ## Project Overview 
 This project is a Python-based financial analysis assignment. It retrieves historical financial data from WRDS, calculates core financial ratios, evaluates corporate financial risk through a scoring model, and visualizes key indicators to compare financial health across companies. 
 ## Data Source 
