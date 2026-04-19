@@ -19,31 +19,68 @@ df = db.raw_sql("""
       AND consol = 'C'
       AND indfmt = 'INDL'
 """)
-df
 def analyze_financial_health(df):
-if df.empty:
+
+    if df.empty:
         raise ValueError("错误：未获取到任何公司数据，请检查股票代码或日期")
-required_cols = ['price', 'marketcap', 'ebitda', 'debt', 'net_income', 'revenue','equity','datadate']
+
+    required_cols = ['price', 'marketcap', 'ebitda', 'debt', 'net_income', 'revenue','equity','datadate']
     missing_cols = [col for col in required_cols if col not in df.columns]
     if missing_cols:
         raise KeyError(f"错误：数据缺少必要字段：{missing_cols}")
-df = df.dropna().copy()
+
+    df = df.dropna().copy()
     df = df[(df['revenue'] > 0) & (df['equity'] > 0)]
-df['Debt_to_Equity'] = df['debt'] / df['equity']
+    
+    df['Debt_to_Equity'] = df['debt'] / df['equity']
     df['Profit_Margin'] = df['net_income'] / df['revenue']
     df['ROE'] = df['net_income'] / df['equity']
     
     return df, None
+
 analyzed_df, sector_stats = analyze_financial_health(df)
+
 print("\n" + "=" * 60)
 print("Equity (Shareholders' Equity) Data")
 print("=" * 60)
 print(analyzed_df[['symbol', 'name', 'equity']].round(2))
+
 print("\n" + "=" * 60)
 print("Industry Financial Analysis (Not Available: No Sector Data)")
 print("=" * 60)
+
 analyzed_df['Risk_Score'] = (
     analyzed_df['Debt_to_Equity'] * 0.5 +
     (1 - analyzed_df['Profit_Margin']) * 0.3 +
     (1 - analyzed_df['ROE']) * 0.2
 )
+
+print("\n" + "=" * 60)
+print("Financial Risk Assessment (Lower = Safer)")
+print("=" * 60)
+result_df = analyzed_df[['symbol', 'name', 'Debt_to_Equity',
+                         'Profit_Margin', 'ROE', 'Risk_Score']].sort_values('Risk_Score').round(4)
+print(result_df)
+
+print("\n" + "=" * 60)
+print("Complete Analyzed Financial Data")
+print("=" * 60)
+print(analyzed_df.round(4))
+
+import matplotlib.pyplot as plt
+plt.figure(figsize=(12, 6))
+plt.plot(result_df['symbol'], result_df['Debt_to_Equity'], marker='o', color='red', label='Debt/Equity')
+plt.plot(result_df['symbol'], result_df['Profit_Margin'], marker='s', color='blue', label='Profit Margin')
+plt.plot(result_df['symbol'], result_df['ROE'], marker='^', color='green', label='ROE')
+plt.plot(result_df['symbol'], result_df['Risk_Score'], marker='*', color='orange', label='Risk Score')
+
+plt.title("Financial Indicators of US Listed Companies", fontsize=14)
+plt.xlabel("Company Ticker")
+plt.ylabel("Ratio / Score")
+plt.legend()
+plt.grid(alpha=0.3)
+plt.xticks(rotation=45)
+plt.tight_layout()
+plt.show()
+
+print("\n✅ Analysis completed successfully!")
